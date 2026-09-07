@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Card, Delta, Empty, PageHead, Score } from "@/components/ui";
+import { Card, Delta, Empty, PageHead, Score, pillLinkClass } from "@/components/ui";
 import type { Site } from "@/lib/types";
 
 type Overview = {
@@ -45,10 +45,7 @@ export default function OverviewPage() {
         title="Overview"
         lede="Every number here is derived from stored public crawls. Nothing is invented for the empty week."
         action={
-          <Link
-            href="/survey"
-            className="bg-paper px-4 py-2 font-mono text-[12px] uppercase tracking-[0.14em] text-ink"
-          >
+          <Link href="/survey" className={pillLinkClass}>
             Send the agent
           </Link>
         }
@@ -94,13 +91,13 @@ export default function OverviewPage() {
       )}
 
       <div className="mt-8">
-        <h2 className="mb-3 text-2xl">Sites</h2>
+        <h2 className="mb-3 text-2xl font-bold tracking-tight">Sites</h2>
         {data.siteRows.length === 0 ? (
           <Empty title="No sites" detail="Add a client domain on the Sites page." />
         ) : (
-          <Card>
+          <Card className="overflow-hidden">
             <table className="w-full text-left text-sm">
-              <thead className="font-mono text-[10px] uppercase tracking-[0.16em] text-mute">
+              <thead className="bg-paper-2 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink">
                 <tr>
                   <th className="px-4 py-3">Domain</th>
                   <th>Role</th>
@@ -120,7 +117,7 @@ export default function OverviewPage() {
                         {row.site.domain}
                       </div>
                     </td>
-                    <td className="capitalize text-[#cfc3a8]">{row.site.role}</td>
+                    <td className="capitalize text-mute">{row.site.role}</td>
                     <td className="font-mono">{row.latest?.overall ?? "—"}</td>
                     <td>
                       <Delta value={row.delta} />

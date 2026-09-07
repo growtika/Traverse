@@ -14,9 +14,13 @@ export function PageHead({
   return (
     <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
       <div className="max-w-2xl">
-        <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-mute">{kicker}</div>
-        <h1 className="mt-1 text-4xl tracking-tight">{title}</h1>
-        <p className="mt-2 text-[15px] leading-relaxed text-paper-dim text-[#cfc3a8]">{lede}</p>
+        <div className="font-mono text-[12px] font-bold uppercase tracking-[0.28em] text-ink">
+          {kicker}
+        </div>
+        <h1 className="mt-2 font-display text-[40px] font-normal leading-[1.1] tracking-[-0.03em] text-ink">
+          {title}
+        </h1>
+        <p className="mt-2 text-[16px] leading-relaxed text-mute">{lede}</p>
       </div>
       {action}
     </div>
@@ -31,7 +35,11 @@ export function Card({
   className?: string;
 }) {
   return (
-    <section className={`border border-line bg-[#100e0b] ${className}`}>{children}</section>
+    <section
+      className={`rounded-xl border border-line bg-paper shadow-[0_10px_28px_rgba(20,33,28,0.05)] ${className}`}
+    >
+      {children}
+    </section>
   );
 }
 
@@ -48,11 +56,11 @@ export function Score({
     value == null ? "text-mute" : value >= 70 ? "text-moss" : value >= 40 ? "text-warn" : "text-rust";
   return (
     <div>
-      <div className={`font-mono text-2xl tabular-nums ${tone}`}>
+      <div className={`font-mono text-2xl font-bold tabular-nums ${tone}`}>
         {value == null ? empty : value}
       </div>
       {label ? (
-        <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.16em] text-mute">
+        <div className="mt-1 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-mute">
           {label}
         </div>
       ) : null}
@@ -75,14 +83,14 @@ export function Button({
 }) {
   const cls =
     kind === "primary"
-      ? "bg-paper text-ink hover:bg-[#f3ead6] disabled:opacity-50"
-      : "border border-line text-paper hover:border-paper disabled:opacity-50";
+      ? "bg-peach border-peach-2 hover:bg-[#ffd9b0] disabled:opacity-50"
+      : "bg-paper border-line hover:border-ink disabled:opacity-50";
   return (
     <button
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={`px-4 py-2 font-mono text-[12px] uppercase tracking-[0.14em] ${cls}`}
+      className={`inline-flex items-center rounded-lg border px-6 py-2 font-mono text-[13px] font-bold uppercase tracking-[0.04em] text-ink transition-transform hover:-translate-y-px ${cls}`}
     >
       {children}
     </button>
@@ -98,20 +106,25 @@ export function Field({
 }) {
   return (
     <label className="block">
-      <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.16em] text-mute">{label}</div>
+      <div className="mb-1 font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-mute">
+        {label}
+      </div>
       {children}
     </label>
   );
 }
 
 export const inputClass =
-  "w-full border border-line bg-ink px-3 py-2 text-[15px] text-paper outline-none focus:border-paper";
+  "w-full rounded-lg border border-line bg-paper px-3 py-2 text-[15px] text-ink outline-none focus:border-peach-2 focus:shadow-[0_0_0_3px_var(--peach)]";
 
 export function Empty({ title, detail }: { title: string; detail: string }) {
   return (
-    <Card className="px-5 py-10 text-center">
-      <div className="text-2xl">{title}</div>
-      <p className="mx-auto mt-2 max-w-lg text-[#cfc3a8]">{detail}</p>
+    <Card className="overflow-hidden">
+      <div className="frame-grid px-5 py-12 text-center">
+        <div className="mx-auto mb-3 h-2 w-16 rounded-full bg-peach" />
+        <div className="font-display text-[32px] tracking-[-0.02em] text-ink">{title}</div>
+        <p className="mx-auto mt-2 max-w-lg text-mute">{detail}</p>
+      </div>
     </Card>
   );
 }
@@ -127,3 +140,9 @@ export function Delta({ value }: { value: number | null | undefined }) {
     </span>
   );
 }
+
+export const pillLinkClass =
+  "inline-flex items-center rounded-lg border border-peach-2 bg-peach px-6 py-2 font-mono text-[13px] font-bold uppercase tracking-[0.04em] text-ink transition-transform hover:-translate-y-px";
+
+export const sectionLinkClass =
+  "rounded-lg border border-line bg-paper px-3 py-2 font-mono text-[12px] font-bold uppercase tracking-[0.08em] text-ink hover:border-ink";
