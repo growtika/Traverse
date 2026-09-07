@@ -1,5 +1,6 @@
 import { SPEED_DELAY_MS } from "./defaults";
 import {
+  getRun,
   getSettings,
   insertCrossing,
   insertEvidence,
@@ -82,10 +83,15 @@ export function getRunJob(id: string): Promise<void> | undefined {
 }
 
 async function executeRun(runId: string) {
+  const existing = getRun(runId);
   const run = updateRun(runId, {
     status: "running",
     startedAt: nowIso(),
-    progress: { current: 0, total: 0, message: "Starting public crawl" },
+    progress: {
+      current: 0,
+      total: existing?.progress.total ?? 0,
+      message: "Starting public crawl",
+    },
   });
   if (!run) throw new Error("Run missing");
 

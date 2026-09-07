@@ -28,7 +28,6 @@ type Payload = {
 export default function RunDetailPage() {
   const params = useParams<{ id: string }>();
   const [data, setData] = useState<Payload | null>(null);
-  const [tab, setTab] = useState<"map" | "journal" | "evidence" | "fixes">("map");
 
   useEffect(() => {
     let alive = true;
@@ -80,17 +79,23 @@ export default function RunDetailPage() {
         <Card className="p-4"><Score value={summary.act} label="Act" /></Card>
       </div>
 
-      <div className="mb-4 flex gap-4 font-mono text-[12px] uppercase tracking-[0.14em] text-mute">
-        {(["map", "journal", "evidence", "fixes"] as const).map((id) => (
-          <button key={id} onClick={() => setTab(id)} className={tab === id ? "text-paper" : ""}>
-            {id}
-          </button>
-        ))}
-      </div>
+      <nav className="mb-6 flex flex-wrap gap-2 font-mono text-[12px] uppercase tracking-[0.14em]">
+        <a href="#map" className="border border-line px-3 py-2 hover:border-paper">Map</a>
+        <a href="#journal" className="border border-line px-3 py-2 hover:border-paper">Journal</a>
+        <a href="#evidence" className="border border-line px-3 py-2 hover:border-paper">Evidence</a>
+        <a href="#fixes" className="border border-line px-3 py-2 hover:border-paper">Fixes</a>
+      </nav>
 
-      {tab === "map" ? <Map crossings={crossings} /> : null}
-      {tab === "journal" ? <Journal crossings={crossings} /> : null}
-      {tab === "evidence" ? (
+      <section id="map" className="mb-10">
+        <h2 className="mb-3 text-2xl">Map</h2>
+        <Map crossings={crossings} />
+      </section>
+      <section id="journal" className="mb-10">
+        <h2 className="mb-3 text-2xl">Journal</h2>
+        <Journal crossings={crossings} />
+      </section>
+      <section id="evidence" className="mb-10">
+        <h2 className="mb-3 text-2xl">Evidence</h2>
         <div className="grid gap-4 md:grid-cols-2">
           {crossings.flatMap((c) => c.evidence).length === 0 ? (
             <p className="text-mute">No evidence frames yet.</p>
@@ -100,8 +105,11 @@ export default function RunDetailPage() {
             )
           )}
         </div>
-      ) : null}
-      {tab === "fixes" ? <Fixes crossings={crossings} /> : null}
+      </section>
+      <section id="fixes">
+        <h2 className="mb-3 text-2xl">Fixes</h2>
+        <Fixes crossings={crossings} />
+      </section>
     </div>
   );
 }
