@@ -1,14 +1,15 @@
 import { insertAlert, listAlertEvents, listAlerts } from "@/lib/db";
 import { badRequest, json, readJson } from "@/lib/http";
 import type { AlertMetric } from "@/lib/types";
+import { workspaceRoute } from "@/lib/workspace-api";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+export const GET = workspaceRoute(async () => {
   return json({ alerts: listAlerts(), events: listAlertEvents() });
-}
+});
 
-export async function POST(request: Request) {
+export const POST = workspaceRoute(async (request) => {
   const body = await readJson<{
     name?: string;
     siteId?: string | null;
@@ -24,4 +25,4 @@ export async function POST(request: Request) {
     dropPoints: Number(body.dropPoints) || 10,
   });
   return json({ alert }, 201);
-}
+});

@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { Button, Card, Empty, Field, PageHead, inputClass } from "@/components/ui";
+import { cacheSites, readCachedSites, rememberSites } from "@/lib/client-cache";
 import type { Site, SiteRole } from "@/lib/types";
 
 export default function SitesPage() {
@@ -11,9 +12,19 @@ export default function SitesPage() {
   const [role, setRole] = useState<SiteRole>("client");
   const [error, setError] = useState("");
 
-  const load = () => fetch("/api/sites").then((r) => r.json()).then((d) => setSites(d.sites));
+  const adopt = (next: Site[]) => {
+    cacheSites(next);
+    setSites(next);
+  };
+
+  const load = async () => {
+    const data = await fetch("/api/sites").then((r) => r.json());
+    adopt(rememberSites(data.sites, readCachedSites()));
+  };
+
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function onAdd(e: FormEvent) {
@@ -29,23 +40,39 @@ export default function SitesPage() {
       setError(data.error || "Could not add site");
       return;
     }
+    const created = data.site as Site;
+    adopt([...sites.filter((site) => site.domain !== created.domain && site.id !== created.id), created]);
     setDomain("");
     setName("");
-    load();
+    try {
+      await load();
+    } catch {
+      // keep the locally remembered site if the next instance has an empty store
+    }
   }
 
   async function remove(id: string) {
     await fetch(`/api/sites/${id}`, { method: "DELETE" });
-    load();
+    adopt(sites.filter((site) => site.id !== id));
+    try {
+      await load();
+    } catch {
+      // keep local list
+    }
   }
 
   async function setRoleFor(id: string, next: SiteRole) {
-    await fetch(`/api/sites/${id}`, {
+    const res = await fetch(`/api/sites/${id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ role: next }),
     });
-    load();
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.site) {
+      adopt(sites.map((site) => (site.id === id ? data.site : site)));
+    } else {
+      adopt(sites.map((site) => (site.id === id ? { ...site, role: next } : site)));
+    }
   }
 
   return (

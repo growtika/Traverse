@@ -35,6 +35,19 @@ export type Site = {
   updatedAt: string;
 };
 
+/** Client- or API-supplied site used to upsert into an empty serverless store. */
+export type SiteInput = {
+  id?: string;
+  name?: string;
+  domain: string;
+  role?: SiteRole;
+  startPath?: string;
+  faviconUrl?: string | null;
+  notes?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
 export type Route = {
   id: string;
   name: string;
@@ -170,3 +183,16 @@ export type ExtractedFacts = {
 };
 
 export const STAGES: StageName[] = ["know", "find", "extract", "verify", "act"];
+
+export type WorkspaceSnapshot = {
+  version: 1;
+  settings: Settings;
+  sites: Site[];
+  routes: Route[];
+  answerKeys: AnswerKey[];
+  runs: Run[];
+  crossings: Crossing[];
+  evidence: EvidencePage[];
+  alerts: AlertWatcher[];
+  alertEvents: AlertEvent[];
+};
