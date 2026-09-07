@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+:root {
+  --ink: #0c0b09;
+  --ink-2: #161410;
+  --line: #2b261e;
+  --line-2: #3c3428;
+  --paper: #e7dcc4;
+  --paper-dim: #cfc3a8;
+  --rust: #c45c26;
+  --moss: #7d9a6f;
+  --warn: #d3a23a;
+  --mute: #8a8172;
+}
+
+@theme inline {
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-line: var(--line);
+  --color-paper: var(--paper);
+  --color-rust: var(--rust);
+  --color-moss: var(--moss);
+  --color-warn: var(--warn);
+  --color-mute: var(--mute);
+  --font-sans: var(--font-serif);
+  --font-mono: var(--font-geist-mono);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+  background: var(--ink);
+  color: var(--paper);
+}
+
+body {
+  font-family: var(--font-serif), Georgia, serif;
+  background-image:
+    radial-gradient(ellipse at top, rgba(231, 220, 196, 0.04), transparent 46%),
+    linear-gradient(180deg, #100e0b 0%, #0c0b09 100%);
+}
+
+a {
+  color: inherit;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+::selection {
+  background: rgba(196, 92, 38, 0.35);
+}
+
+.frame-grid {
+  background-image:
+    linear-gradient(rgba(231, 220, 196, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(231, 220, 196, 0.04) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
