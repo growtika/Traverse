@@ -218,6 +218,7 @@ async function runCrossing(input: {
   }
 
   const know = gradeKnow(first.page, first.ok);
+  updateCrossing(crossing.id, { knowScore: know, journal: [...journal] });
 
   const candidates = rankCandidates(
     input.route,
@@ -259,12 +260,14 @@ async function runCrossing(input: {
     input.route,
     captured.map((c) => ({ url: c.url, page: c.page })),
   );
+  updateCrossing(crossing.id, { findScore: find, journal: [...journal] });
   const facts = extractFacts(captured.map((c) => c.page));
   const extract = gradeExtract(
     facts,
     captured.map((c) => c.page),
   );
   note("extract", `Extracted ${facts.facts.length} facts, ${facts.prices.length} prices, ${facts.contacts.length} contacts.`);
+  updateCrossing(crossing.id, { extractScore: extract, journal: [...journal] });
 
   const applicableKeys = input.keys.filter((key) => {
     if (key.siteId && key.siteId !== input.site.id) return false;
@@ -274,6 +277,7 @@ async function runCrossing(input: {
   const corpus = captured.map((c) => `${c.page.title} ${c.page.headings.join(" ")} ${c.page.text}`).join("\n");
   const verify = gradeVerify(applicableKeys, corpus, input.settings.verifyStrictness);
   note("verify", verify.note);
+  updateCrossing(crossing.id, { verifyScore: verify.score, journal: [...journal] });
 
   const act = gradeAct(captured.map((c) => c.page));
   const forms = captured.flatMap((c) => c.page.forms);

@@ -1,8 +1,18 @@
 import type { EvidencePage } from "@/lib/types";
 
-export function EvidenceFrame({ page }: { page: EvidencePage }) {
+export function EvidenceFrame({
+  page,
+  highlight = false,
+}: {
+  page: EvidencePage;
+  highlight?: boolean;
+}) {
   return (
-    <article className="overflow-hidden rounded-2xl border border-line bg-paper shadow-[0_10px_28px_rgba(20,33,28,0.06)]">
+    <article
+      className={`overflow-hidden rounded-2xl border bg-paper shadow-[0_10px_28px_rgba(20,33,28,0.06)] ${
+        highlight ? "border-ink shadow-[inset_0_0_0_1px_var(--ink)]" : "border-line"
+      }`}
+    >
       <div className="flex items-center justify-between gap-3 bg-peach px-3 py-2 font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-ink">
         <span>{page.stage}</span>
         <span>{page.partial ? "Partial" : "Captured"}</span>
