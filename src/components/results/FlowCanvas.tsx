@@ -49,8 +49,8 @@ export function FlowCanvas({
         ) : null}
       </div>
 
-      <div className="flow-canvas overflow-x-auto">
-        <div className="relative min-w-max p-1" style={{ width: graph.width, height: graph.height }}>
+      <div className="flow-canvas min-h-[280px] overflow-x-auto">
+        <div className="relative min-w-max p-1" style={{ width: graph.width, height: Math.max(graph.height, 280) }}>
           <svg
             className="pointer-events-none absolute inset-0"
             width={graph.width}
@@ -145,7 +145,11 @@ function FlowNodeCard({
         className="flow-port flow-port-out"
         style={{ background: node.kind === "agent" ? "var(--peach-2)" : TONE_STROKE[node.tone] }}
       />
-      <span className="flex min-w-0 flex-1 items-center gap-2.5 px-3">
+      <span
+        className="w-1.5 self-stretch rounded-l-[12px]"
+        style={{ background: node.kind === "agent" ? "var(--ink)" : TONE_STROKE[node.tone] }}
+      />
+      <span className="flex min-w-0 flex-1 items-center gap-2 px-2.5">
         <span
           className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg font-mono text-[11px] font-bold ${
             node.kind === "agent"
@@ -161,7 +165,7 @@ function FlowNodeCard({
           <span className="block truncate font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-mute">
             {node.kind === "stage" ? node.label : node.kind === "agent" ? "Agent" : "Page"}
           </span>
-          <span className="block truncate text-[13px] font-semibold leading-tight">
+          <span className="block truncate text-[15px] font-semibold leading-tight">
             {node.kind === "stage" ? (
               <span className={TONE_TEXT[node.tone]}>{score}</span>
             ) : (
@@ -188,7 +192,7 @@ export function CrossingRail({
 }) {
   if (!crossings.length) return null;
   return (
-    <div className="flex gap-2 overflow-x-auto pb-1">
+    <div className="flex flex-wrap gap-2">
       {crossings.map((crossing) => {
         const active = crossing.id === selectedId;
         return (
@@ -196,22 +200,21 @@ export function CrossingRail({
             key={crossing.id}
             type="button"
             onClick={() => onSelect(crossing.id)}
-            className={`min-w-[168px] rounded-xl border px-3 py-2 text-left ${
+            className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 ${
               active
                 ? "border-ink bg-mint shadow-[inset_0_0_0_1px_var(--ink)]"
                 : "border-line bg-paper hover:border-ink"
             }`}
           >
-            <div className="truncate font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-mute">
-              {crossing.site?.role === "client" ? "you" : crossing.site?.role} · x
-              {crossing.crossingIndex + 1}
-            </div>
-            <div className="truncate text-sm font-semibold">
+            <span className="font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-mute">
+              {crossing.site?.role === "client" ? "you" : "rival"}
+            </span>
+            <span className="text-sm">
               {crossing.site?.domain} · {crossing.route?.name}
-            </div>
-            <div className={`font-mono text-[12px] ${crossing.overallScore == null ? "text-mute" : "text-ink"}`}>
+            </span>
+            <span className="font-mono text-[12px] font-bold">
               {crossing.overallScore ?? "—"}
-            </div>
+            </span>
           </button>
         );
       })}

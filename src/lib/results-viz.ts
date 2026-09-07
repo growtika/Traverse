@@ -77,12 +77,12 @@ export type HeatRow = {
 };
 
 export const FLOW_LAYOUT = {
-  padding: 32,
-  nodeW: 148,
-  nodeH: 76,
-  pageH: 54,
-  gapX: 46,
-  gapY: 38,
+  padding: 28,
+  nodeW: 132,
+  nodeH: 82,
+  pageH: 56,
+  gapX: 34,
+  gapY: 36,
   pageGap: 12,
   maxPagesPerStage: 3,
 } as const;

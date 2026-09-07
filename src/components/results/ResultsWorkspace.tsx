@@ -154,16 +154,16 @@ export function ResultsWorkspace({
 
       {tab === "map" ? (
         <section id="map" className="grid gap-5">
-          <CrossingRail
-            crossings={crossings}
-            selectedId={focusedCrossing?.id ?? null}
-            onSelect={(crossingId) => select({ crossingId, stage: focus.stage })}
-          />
           <FlowCanvas
             crossing={focusedCrossing}
             agentLabel={run.settingsSnapshot.agentLabel}
             focus={focus}
             onSelect={select}
+          />
+          <CrossingRail
+            crossings={crossings}
+            selectedId={focusedCrossing?.id ?? null}
+            onSelect={(crossingId) => select({ crossingId, stage: focus.stage })}
           />
           <StageTracks crossings={crossings} focus={focus} onSelect={select} />
           <HeatTiles crossings={crossings} focus={focus} onSelect={select} />
