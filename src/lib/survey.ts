@@ -9,10 +9,12 @@ import {
   listRoutes,
   listSites,
   nowIso,
+  persistWorkspaceNow,
   updateCrossing,
   updateRun,
+  upsertSite,
 } from "./db";
-import { siteOrigin } from "./domain";
+import { normalizeDomainInput, siteOrigin } from "./domain";
 import { fetchPublicPage, fetchRobots, userAgentFor } from "./fetch-page";
 import {
   buildFixes,
@@ -35,6 +37,7 @@ import type {
   Run,
   Settings,
   Site,
+  SiteInput,
   StageName,
 } from "./types";
 
@@ -43,11 +46,23 @@ const jobs = new Map<string, Promise<void>>();
 export function createAndStartRun(input?: {
   siteIds?: string[];
   routeIds?: string[];
+  sites?: SiteInput[];
 }): Run {
+  if (input?.sites?.length) {
+    for (const site of input.sites) {
+      upsertSite(site);
+    }
+  }
   const settings = getSettings();
-  const sites = pickSites(settings, input?.siteIds);
+  const sites = pickSites(settings, input?.siteIds, input?.sites);
   if (!sites.length) {
+    if (input?.siteIds?.length) {
+      throw new Error("Workspace storage reset on this server — re-add your client site");
+    }
     throw new Error("Add at least one client site before starting a survey.");
+  }
+  if (!sites.some((site) => site.role === "client")) {
+    throw new Error("Select at least one client site before starting a survey.");
   }
   const routes = listRoutes().filter((r) =>
     input?.routeIds?.length ? input.routeIds.includes(r.id) : r.enabled,
@@ -126,6 +141,7 @@ async function executeRun(runId: string) {
           keys,
           robots,
         });
+        void persistWorkspaceNow();
       }
     }
   }
@@ -136,6 +152,7 @@ async function executeRun(runId: string) {
     progress: { current: total, total, message: "Completed" },
   });
   await evaluateAlerts(runId);
+  await persistWorkspaceNow();
 }
 
 async function runCrossing(input: {
@@ -372,9 +389,28 @@ function rankCandidates(
   return rotated.map((item) => item.href);
 }
 
-function pickSites(settings: Settings, siteIds?: string[]): Site[] {
+function payloadDomain(raw: string): string {
+  try {
+    return normalizeDomainInput(raw).domain;
+  } catch {
+    return raw.trim().toLowerCase();
+  }
+}
+
+function pickSites(settings: Settings, siteIds?: string[], payload?: SiteInput[]): Site[] {
   const all = listSites();
-  const selected = siteIds?.length ? all.filter((s) => siteIds.includes(s.id)) : all;
+  const selected = siteIds?.length
+    ? all.filter((site) => {
+        if (siteIds.includes(site.id)) return true;
+        return Boolean(
+          payload?.some(
+            (item) =>
+              Boolean(item.id && siteIds.includes(item.id)) &&
+              payloadDomain(item.domain) === site.domain,
+          ),
+        );
+      })
+    : all;
   if (!settings.includeRivals) {
     const clients = selected.filter((s) => s.role === "client");
     return clients.length ? clients : selected;

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button, Card, Empty, PageHead } from "@/components/ui";
+import { readCachedSites, rememberSites } from "@/lib/client-cache";
 import type { Route, Settings, Site } from "@/lib/types";
 
 export default function SurveyPage() {
@@ -21,10 +22,11 @@ export default function SurveyPage() {
       fetch("/api/routes").then((r) => r.json()),
       fetch("/api/settings").then((r) => r.json()),
     ]).then(([s, r, st]) => {
-      setSites(s.sites);
+      const latest = rememberSites(s.sites, readCachedSites());
+      setSites(latest);
       setRoutes(r.routes);
       setSettings(st.settings);
-      setSiteIds(s.sites.map((x: Site) => x.id));
+      setSiteIds(latest.map((x) => x.id));
       setRouteIds(r.routes.filter((x: Route) => x.enabled).map((x: Route) => x.id));
     });
   }, []);
@@ -36,10 +38,40 @@ export default function SurveyPage() {
   async function start() {
     setBusy(true);
     setError("");
+    let latest = sites.length ? sites : readCachedSites();
+    let ids = siteIds;
+    try {
+      const fresh = await fetch("/api/sites").then((r) => r.json());
+      const serverSites: Site[] = fresh.sites ?? [];
+      latest = rememberSites(serverSites, latest);
+      setSites(latest);
+      if (serverSites.length) {
+        const kept = ids.filter((id) => latest.some((site) => site.id === id));
+        ids = kept.length ? kept : latest.map((site) => site.id);
+        setSiteIds(ids);
+      } else if (!ids.length) {
+        ids = latest.map((site) => site.id);
+        setSiteIds(ids);
+      }
+    } catch {
+      latest = latest.length ? latest : readCachedSites();
+    }
+
+    const selectedClients = latest.filter((site) => ids.includes(site.id) && site.role === "client");
+    if (!latest.length || !selectedClients.length) {
+      setError(
+        latest.length
+          ? "Select at least one client site before starting a survey."
+          : "Sites did not persist — re-add a client site",
+      );
+      setBusy(false);
+      return;
+    }
+
     const res = await fetch("/api/runs", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ siteIds, routeIds }),
+      body: JSON.stringify({ siteIds: ids, routeIds, sites: latest }),
     });
     const data = await res.json();
     setBusy(false);

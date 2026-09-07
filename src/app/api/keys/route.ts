@@ -1,13 +1,14 @@
 import { insertAnswerKey, listAnswerKeys } from "@/lib/db";
 import { badRequest, json, readJson } from "@/lib/http";
+import { workspaceRoute } from "@/lib/workspace-api";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+export const GET = workspaceRoute(async () => {
   return json({ keys: listAnswerKeys() });
-}
+});
 
-export async function POST(request: Request) {
+export const POST = workspaceRoute(async (request) => {
   const body = await readJson<{
     siteId?: string | null;
     routeId?: string | null;
@@ -24,4 +25,4 @@ export async function POST(request: Request) {
     expected: body.expected.trim(),
   });
   return json({ key }, 201);
-}
+});

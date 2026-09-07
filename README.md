@@ -12,7 +12,8 @@ There is **no auth** and **no Stripe**. The app is a single-tenant open workspac
 - Stores HTML evidence frames from those fetches (labeled honestly — not Chromium screenshots)
 - Never logs in and never submits forms
 - Respects `robots.txt` when that setting is on
-- Persists sites, rivals, routes, answer keys, runs, and alerts in SQLite
+- Persists sites, rivals, routes, answer keys, runs, and alerts in SQLite locally
+- On Vercel, uses a warm-instance store plus optional Blob snapshot (see Storage)
 - Fires in-app alerts from real run-to-run diffs (Slack only if a webhook is configured)
 
 ## Run locally
@@ -37,7 +38,23 @@ Headless one-shot against a public domain:
 npx tsx scripts/survey-once.ts example.com
 ```
 
-SQLite lives in `data/traverse.sqlite`. Override with `TRAVERSE_DATA_DIR`.
+## Storage
+
+Locally, Traverse uses SQLite in `data/traverse.sqlite`. Override the directory with `TRAVERSE_DATA_DIR`.
+
+On Vercel, filesystem SQLite (`/tmp` or the deploy checkout) does **not** survive across serverless instances. The app therefore:
+
+1. Keeps the workspace in `globalThis.__traverseStore` (an in-memory SQLite database) so warm instances reuse sites and runs.
+2. When `BLOB_READ_WRITE_TOKEN` is set, serializes the workspace to a single JSON document in Vercel Blob (`traverse/workspace.json`) on writes and hydrates from it on cold start.
+3. Accepts an optional `sites` array on `POST /api/runs` and upserts those records before starting. The Survey page sends the current site list, so a cold instance can still start a survey from the browser payload.
+
+Temporary deploys (`vercel deploy --temporary`) work without extra setup. For multi-instance durability, create a Blob store and pass the token:
+
+```bash
+vercel deploy --temporary -e BLOB_READ_WRITE_TOKEN=$BLOB_READ_WRITE_TOKEN
+```
+
+Or attach `BLOB_READ_WRITE_TOKEN` with `vercel env`. Without a token, storage is warm-instance only — add a client site again if a new isolate starts empty. The Survey page re-fetches sites before start and says so if none remain.
 
 Optional Slack delivery:
 
@@ -49,7 +66,7 @@ Or paste a webhook on the Settings page. In-app alerts work without it.
 
 ## Stack
 
-Next.js 15 (App Router) · TypeScript · Tailwind · better-sqlite3 · cheerio · vitest
+Next.js 15 (App Router) · TypeScript · Tailwind · better-sqlite3 · Vercel Blob · cheerio · vitest
 
 ## Honesty
 

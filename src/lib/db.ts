@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import Database from "better-sqlite3";
+import { hasBlobToken, readWorkspaceBlob, writeWorkspaceBlob } from "./blob-io";
 import { DEFAULT_ROUTES, DEFAULT_SETTINGS } from "./defaults";
+import { normalizeDomainInput } from "./domain";
 import { newId } from "./id";
 import type {
   AlertEvent,
@@ -13,6 +15,8 @@ import type {
   Run,
   Settings,
   Site,
+  SiteInput,
+  WorkspaceSnapshot,
 } from "./types";
 
 const DATA_DIR = process.env.TRAVERSE_DATA_DIR || path.join(process.cwd(), "data");
@@ -20,16 +24,83 @@ const DB_PATH = path.join(DATA_DIR, "traverse.sqlite");
 
 let cached: Database.Database | null = null;
 
-export function getDb(): Database.Database {
-  if (cached) return cached;
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  const db = new Database(DB_PATH);
-  db.pragma("journal_mode = WAL");
+type TraverseStore = {
+  db: Database.Database | null;
+  hydrated: boolean;
+  hydrating: Promise<void> | null;
+};
+
+function traverseStore(): TraverseStore {
+  const g = globalThis as typeof globalThis & { __traverseStore?: TraverseStore };
+  if (!g.__traverseStore) {
+    g.__traverseStore = { db: null, hydrated: false, hydrating: null };
+  }
+  return g.__traverseStore;
+}
+
+export function isServerlessWorkspace(): boolean {
+  return process.env.TRAVERSE_STORE === "memory" || Boolean(process.env.VERCEL);
+}
+
+function openDatabase(filename: string, journal: string): Database.Database {
+  const db = new Database(filename);
+  db.pragma(`journal_mode = ${journal}`);
   db.pragma("foreign_keys = ON");
   migrate(db);
   seed(db);
-  cached = db;
   return db;
+}
+
+export function getDb(): Database.Database {
+  if (isServerlessWorkspace()) {
+    const store = traverseStore();
+    if (!store.db) {
+      store.db = openDatabase(":memory:", "MEMORY");
+    }
+    return store.db;
+  }
+  if (cached) return cached;
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  cached = openDatabase(DB_PATH, "WAL");
+  return cached;
+}
+
+function isWorkspaceSnapshot(value: unknown): value is WorkspaceSnapshot {
+  if (!value || typeof value !== "object") return false;
+  const snap = value as Partial<WorkspaceSnapshot>;
+  return snap.version === 1 && Array.isArray(snap.sites) && Array.isArray(snap.routes);
+}
+
+export async function hydrateWorkspace(): Promise<void> {
+  if (!isServerlessWorkspace()) return;
+  const store = traverseStore();
+  if (store.hydrated) return;
+  if (!store.hydrating) {
+    store.hydrating = (async () => {
+      try {
+        const raw = await readWorkspaceBlob();
+        if (isWorkspaceSnapshot(raw)) {
+          applyWorkspaceSnapshot(raw);
+        }
+      } catch (error) {
+        console.error("Traverse workspace blob hydrate failed", error);
+      } finally {
+        store.hydrated = true;
+      }
+    })();
+  }
+  await store.hydrating;
+}
+
+export async function persistWorkspaceNow(): Promise<void> {
+  if (!isServerlessWorkspace()) return;
+  const store = traverseStore();
+  if (!store.hydrated || !store.db || !hasBlobToken()) return;
+  try {
+    await writeWorkspaceBlob(exportWorkspaceSnapshot());
+  } catch (error) {
+    console.error("Traverse workspace blob persist failed", error);
+  }
 }
 
 function migrate(db: Database.Database) {
@@ -271,9 +342,12 @@ export function getSite(id: string): Site | null {
   return row ? mapSite(row) : null;
 }
 
-export function insertSite(input: Omit<Site, "id" | "createdAt" | "updatedAt">): Site {
-  const id = newId("sit");
+export function insertSite(
+  input: Omit<Site, "id" | "createdAt" | "updatedAt"> & { id?: string },
+): Site {
+  const id = input.id?.trim() || newId("sit");
   const ts = nowIso();
+  const role = input.role === "rival" ? "rival" : "client";
   getDb()
     .prepare(
       `INSERT INTO sites (id, name, domain, role, start_path, favicon_url, notes, created_at, updated_at)
@@ -283,7 +357,7 @@ export function insertSite(input: Omit<Site, "id" | "createdAt" | "updatedAt">):
       id,
       name: input.name,
       domain: input.domain,
-      role: input.role,
+      role,
       start_path: input.startPath,
       favicon_url: input.faviconUrl,
       notes: input.notes,
@@ -291,6 +365,46 @@ export function insertSite(input: Omit<Site, "id" | "createdAt" | "updatedAt">):
       updated_at: ts,
     });
   return getSite(id)!;
+}
+
+export function upsertSite(input: SiteInput): Site {
+  let domain = (input.domain || "").trim();
+  let startPath = input.startPath || "/";
+  try {
+    const parsed = normalizeDomainInput(input.domain || "");
+    domain = parsed.domain;
+    startPath = input.startPath || parsed.startPath;
+  } catch {
+    domain = domain.toLowerCase();
+    if (!domain) {
+      throw new Error("Enter a public domain, e.g. example.com");
+    }
+  }
+  const role = input.role === "rival" ? "rival" : "client";
+  const name = (input.name || domain).trim();
+  const notes = input.notes ?? "";
+  const byId = input.id ? getSite(input.id) : null;
+  const byDomain = listSites().find((site) => site.domain === domain) ?? null;
+  const existing = byId || byDomain;
+  if (existing) {
+    return updateSite(existing.id, {
+      name,
+      domain,
+      role,
+      startPath,
+      faviconUrl: input.faviconUrl ?? existing.faviconUrl,
+      notes,
+    })!;
+  }
+  return insertSite({
+    id: input.id,
+    name,
+    domain,
+    role,
+    startPath,
+    faviconUrl: input.faviconUrl ?? null,
+    notes,
+  });
 }
 
 export function updateSite(id: string, patch: Partial<Site>): Site | null {
@@ -866,4 +980,232 @@ function mapAlertEvent(row: AlertEventRow): AlertEvent {
 
 function clampInt(n: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, Math.round(Number(n) || min)));
+}
+
+export function listAllCrossings(): Crossing[] {
+  return (
+    getDb()
+      .prepare("SELECT * FROM crossings ORDER BY run_id, site_id, route_id, crossing_index")
+      .all() as CrossingRow[]
+  ).map(mapCrossing);
+}
+
+export function listAllEvidence(): EvidencePage[] {
+  return (getDb().prepare("SELECT * FROM evidence_pages").all() as EvidenceRow[]).map(mapEvidence);
+}
+
+export function exportWorkspaceSnapshot(): WorkspaceSnapshot {
+  return {
+    version: 1,
+    settings: getSettings(),
+    sites: listSites(),
+    routes: listRoutes(),
+    answerKeys: listAnswerKeys(),
+    runs: listRuns(),
+    crossings: listAllCrossings(),
+    evidence: listAllEvidence(),
+    alerts: listAlerts(),
+    alertEvents: listAlertEvents(),
+  };
+}
+
+export function applyWorkspaceSnapshot(snap: WorkspaceSnapshot) {
+  const db = getDb();
+  db.pragma("foreign_keys = OFF");
+  const apply = db.transaction(() => {
+    db.exec(`
+      DELETE FROM alert_events;
+      DELETE FROM evidence_pages;
+      DELETE FROM crossings;
+      DELETE FROM runs;
+      DELETE FROM answer_keys;
+      DELETE FROM alerts;
+      DELETE FROM routes;
+      DELETE FROM sites;
+      DELETE FROM settings;
+    `);
+
+    db.prepare(
+      `INSERT INTO settings (
+        id, agent_label, speed, crossings_per_route, verify_strictness,
+        max_pages_per_crossing, respect_robots, include_rivals, slack_webhook_url
+      ) VALUES (1, @agent_label, @speed, @crossings_per_route, @verify_strictness,
+        @max_pages_per_crossing, @respect_robots, @include_rivals, @slack_webhook_url)`,
+    ).run({
+      agent_label: snap.settings.agentLabel,
+      speed: snap.settings.speed,
+      crossings_per_route: snap.settings.crossingsPerRoute,
+      verify_strictness: snap.settings.verifyStrictness,
+      max_pages_per_crossing: snap.settings.maxPagesPerCrossing,
+      respect_robots: snap.settings.respectRobots ? 1 : 0,
+      include_rivals: snap.settings.includeRivals ? 1 : 0,
+      slack_webhook_url: snap.settings.slackWebhookUrl || "",
+    });
+
+    const insertSiteRow = db.prepare(
+      `INSERT INTO sites (id, name, domain, role, start_path, favicon_url, notes, created_at, updated_at)
+       VALUES (@id, @name, @domain, @role, @start_path, @favicon_url, @notes, @created_at, @updated_at)`,
+    );
+    for (const site of snap.sites) {
+      insertSiteRow.run({
+        id: site.id,
+        name: site.name,
+        domain: site.domain,
+        role: site.role === "rival" ? "rival" : "client",
+        start_path: site.startPath,
+        favicon_url: site.faviconUrl,
+        notes: site.notes,
+        created_at: site.createdAt,
+        updated_at: site.updatedAt,
+      });
+    }
+
+    const insertRoute = db.prepare(
+      `INSERT INTO routes (id, name, slug, intent, query_terms, path_hints, enabled, sort_order)
+       VALUES (@id, @name, @slug, @intent, @query_terms, @path_hints, @enabled, @sort_order)`,
+    );
+    for (const route of snap.routes) {
+      insertRoute.run({
+        id: route.id,
+        name: route.name,
+        slug: route.slug,
+        intent: route.intent,
+        query_terms: JSON.stringify(route.queryTerms),
+        path_hints: JSON.stringify(route.pathHints),
+        enabled: route.enabled ? 1 : 0,
+        sort_order: route.sortOrder,
+      });
+    }
+
+    const insertKey = db.prepare(
+      `INSERT INTO answer_keys (id, site_id, route_id, claim, expected, created_at)
+       VALUES (@id, @site_id, @route_id, @claim, @expected, @created_at)`,
+    );
+    for (const key of snap.answerKeys) {
+      insertKey.run({
+        id: key.id,
+        site_id: key.siteId,
+        route_id: key.routeId,
+        claim: key.claim,
+        expected: key.expected,
+        created_at: key.createdAt,
+      });
+    }
+
+    const insertRunRow = db.prepare(
+      `INSERT INTO runs (id, status, site_ids, route_ids, settings_snapshot, started_at, finished_at, error, progress, created_at)
+       VALUES (@id, @status, @site_ids, @route_ids, @settings_snapshot, @started_at, @finished_at, @error, @progress, @created_at)`,
+    );
+    for (const run of snap.runs) {
+      insertRunRow.run({
+        id: run.id,
+        status: run.status,
+        site_ids: JSON.stringify(run.siteIds),
+        route_ids: JSON.stringify(run.routeIds),
+        settings_snapshot: JSON.stringify(run.settingsSnapshot),
+        started_at: run.startedAt,
+        finished_at: run.finishedAt,
+        error: run.error,
+        progress: JSON.stringify(run.progress),
+        created_at: run.createdAt,
+      });
+    }
+
+    const insertCrossingRow = db.prepare(
+      `INSERT INTO crossings (
+        id, run_id, site_id, route_id, crossing_index, status, know_score, find_score,
+        extract_score, verify_score, act_score, overall_score, passed, journal, fixes, error
+      ) VALUES (
+        @id, @run_id, @site_id, @route_id, @crossing_index, @status, @know_score, @find_score,
+        @extract_score, @verify_score, @act_score, @overall_score, @passed, @journal, @fixes, @error
+      )`,
+    );
+    for (const crossing of snap.crossings) {
+      insertCrossingRow.run({
+        id: crossing.id,
+        run_id: crossing.runId,
+        site_id: crossing.siteId,
+        route_id: crossing.routeId,
+        crossing_index: crossing.crossingIndex,
+        status: crossing.status,
+        know_score: crossing.knowScore,
+        find_score: crossing.findScore,
+        extract_score: crossing.extractScore,
+        verify_score: crossing.verifyScore,
+        act_score: crossing.actScore,
+        overall_score: crossing.overallScore,
+        passed: crossing.passed === null ? null : crossing.passed ? 1 : 0,
+        journal: JSON.stringify(crossing.journal),
+        fixes: JSON.stringify(crossing.fixes),
+        error: crossing.error,
+      });
+    }
+
+    const insertEvidenceRow = db.prepare(
+      `INSERT INTO evidence_pages (
+        id, crossing_id, stage, url, final_url, status_code, title, excerpt, headings, links, forms,
+        html, robots_allowed, partial, label, fetched_at, error
+      ) VALUES (
+        @id, @crossing_id, @stage, @url, @final_url, @status_code, @title, @excerpt, @headings, @links, @forms,
+        @html, @robots_allowed, @partial, @label, @fetched_at, @error
+      )`,
+    );
+    for (const page of snap.evidence) {
+      insertEvidenceRow.run({
+        id: page.id,
+        crossing_id: page.crossingId,
+        stage: page.stage,
+        url: page.url,
+        final_url: page.finalUrl,
+        status_code: page.statusCode,
+        title: page.title,
+        excerpt: page.excerpt,
+        headings: JSON.stringify(page.headings),
+        links: JSON.stringify(page.links),
+        forms: JSON.stringify(page.forms),
+        html: page.html,
+        robots_allowed: page.robotsAllowed ? 1 : 0,
+        partial: page.partial ? 1 : 0,
+        label: page.label,
+        fetched_at: page.fetchedAt,
+        error: page.error,
+      });
+    }
+
+    const insertAlertRow = db.prepare(
+      `INSERT INTO alerts (id, name, enabled, site_id, metric, drop_points, created_at)
+       VALUES (@id, @name, @enabled, @site_id, @metric, @drop_points, @created_at)`,
+    );
+    for (const alert of snap.alerts) {
+      insertAlertRow.run({
+        id: alert.id,
+        name: alert.name,
+        enabled: alert.enabled ? 1 : 0,
+        site_id: alert.siteId,
+        metric: alert.metric,
+        drop_points: alert.dropPoints,
+        created_at: alert.createdAt,
+      });
+    }
+
+    const insertEventRow = db.prepare(
+      `INSERT INTO alert_events (id, alert_id, run_id, title, detail, slack_status, created_at, read)
+       VALUES (@id, @alert_id, @run_id, @title, @detail, @slack_status, @created_at, @read)`,
+    );
+    for (const event of snap.alertEvents) {
+      insertEventRow.run({
+        id: event.id,
+        alert_id: event.alertId,
+        run_id: event.runId,
+        title: event.title,
+        detail: event.detail,
+        slack_status: event.slackStatus,
+        created_at: event.createdAt,
+        read: event.read ? 1 : 0,
+      });
+    }
+  });
+  apply();
+  db.pragma("foreign_keys = ON");
+  seed(db);
 }

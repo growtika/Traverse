@@ -2,14 +2,15 @@ import { faviconCandidates, normalizeDomainInput } from "@/lib/domain";
 import { insertSite, listSites } from "@/lib/db";
 import { badRequest, json, readJson } from "@/lib/http";
 import type { SiteRole } from "@/lib/types";
+import { workspaceRoute } from "@/lib/workspace-api";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+export const GET = workspaceRoute(async () => {
   return json({ sites: listSites() });
-}
+});
 
-export async function POST(request: Request) {
+export const POST = workspaceRoute(async (request) => {
   const body = await readJson<{
     domain?: string;
     name?: string;
@@ -39,4 +40,4 @@ export async function POST(request: Request) {
     }
     return badRequest(message);
   }
-}
+});
