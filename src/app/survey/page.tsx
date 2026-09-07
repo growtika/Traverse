@@ -71,7 +71,7 @@ export default function SurveyPage() {
           ) : null}
           <div className="grid gap-6 md:grid-cols-2">
             <Card className="p-5">
-              <h2 className="mb-3 text-2xl">Sites</h2>
+              <h2 className="mb-3 text-2xl font-bold tracking-tight">Sites</h2>
               {sites.map((site) => (
                 <label key={site.id} className="mb-2 flex items-center gap-2">
                   <input
@@ -86,7 +86,7 @@ export default function SurveyPage() {
               ))}
             </Card>
             <Card className="p-5">
-              <h2 className="mb-3 text-2xl">Routes</h2>
+              <h2 className="mb-3 text-2xl font-bold tracking-tight">Routes</h2>
               {routes.map((route) => (
                 <label key={route.id} className="mb-2 flex items-center gap-2">
                   <input

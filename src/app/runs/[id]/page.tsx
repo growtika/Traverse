@@ -3,7 +3,7 @@
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { EvidenceFrame } from "@/components/EvidenceFrame";
-import { Card, PageHead, Score } from "@/components/ui";
+import { Card, PageHead, Score, sectionLinkClass } from "@/components/ui";
 import type { Crossing, EvidencePage, Route, Run, Site } from "@/lib/types";
 
 type CrossingView = Crossing & {
@@ -61,9 +61,9 @@ export default function RunDetailPage() {
         <Card className="mb-6 p-4 text-rust">{run.error || "Run failed."}</Card>
       ) : null}
 
-      <div className="mb-6 h-2 border border-line">
+      <div className="mb-6 h-2 overflow-hidden rounded-full border border-line bg-paper">
         <div
-          className="h-full bg-paper"
+          className="h-full bg-peach"
           style={{
             width: `${run.progress.total ? (run.progress.current / run.progress.total) * 100 : 0}%`,
           }}
@@ -79,23 +79,23 @@ export default function RunDetailPage() {
         <Card className="p-4"><Score value={summary.act} label="Act" /></Card>
       </div>
 
-      <nav className="mb-6 flex flex-wrap gap-2 font-mono text-[12px] uppercase tracking-[0.14em]">
-        <a href="#map" className="border border-line px-3 py-2 hover:border-paper">Map</a>
-        <a href="#journal" className="border border-line px-3 py-2 hover:border-paper">Journal</a>
-        <a href="#evidence" className="border border-line px-3 py-2 hover:border-paper">Evidence</a>
-        <a href="#fixes" className="border border-line px-3 py-2 hover:border-paper">Fixes</a>
+      <nav className="mb-6 flex flex-wrap gap-2">
+        <a href="#map" className={sectionLinkClass}>Map</a>
+        <a href="#journal" className={sectionLinkClass}>Journal</a>
+        <a href="#evidence" className={sectionLinkClass}>Evidence</a>
+        <a href="#fixes" className={sectionLinkClass}>Fixes</a>
       </nav>
 
       <section id="map" className="mb-10">
-        <h2 className="mb-3 text-2xl">Map</h2>
+        <h2 className="mb-3 text-2xl font-bold tracking-tight">Map</h2>
         <Map crossings={crossings} />
       </section>
       <section id="journal" className="mb-10">
-        <h2 className="mb-3 text-2xl">Journal</h2>
+        <h2 className="mb-3 text-2xl font-bold tracking-tight">Journal</h2>
         <Journal crossings={crossings} />
       </section>
       <section id="evidence" className="mb-10">
-        <h2 className="mb-3 text-2xl">Evidence</h2>
+        <h2 className="mb-3 text-2xl font-bold tracking-tight">Evidence</h2>
         <div className="grid gap-4 md:grid-cols-2">
           {crossings.flatMap((c) => c.evidence).length === 0 ? (
             <p className="text-mute">No evidence frames yet.</p>
@@ -107,7 +107,7 @@ export default function RunDetailPage() {
         </div>
       </section>
       <section id="fixes">
-        <h2 className="mb-3 text-2xl">Fixes</h2>
+        <h2 className="mb-3 text-2xl font-bold tracking-tight">Fixes</h2>
         <Fixes crossings={crossings} />
       </section>
     </div>
@@ -125,7 +125,7 @@ function Map({ crossings }: { crossings: CrossingView[] }) {
               <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-mute">
                 {c.site?.domain} · {c.route?.name} · x{c.crossingIndex + 1}
               </div>
-              <div className="text-[#cfc3a8]">
+              <div className="text-mute">
                 {c.status === "failed" ? c.error : c.passed ? "Held the path" : "Lost the path"}
               </div>
             </div>
@@ -135,7 +135,7 @@ function Map({ crossings }: { crossings: CrossingView[] }) {
               <span>E {c.extractScore ?? "—"}</span>
               <span>V {c.verifyScore ?? "N/A"}</span>
               <span>A {c.actScore ?? "—"}</span>
-              <span className="text-paper">{c.overallScore ?? "—"}</span>
+              <span className="font-bold text-ink">{c.overallScore ?? "—"}</span>
             </div>
           </div>
         </Card>
@@ -179,7 +179,7 @@ function Fixes({ crossings }: { crossings: CrossingView[] }) {
             {fix.severity} · {fix.stage} · {fix.where}
           </div>
           <div className="text-xl">{fix.title}</div>
-          <p className="text-[#cfc3a8]">{fix.detail}</p>
+          <p className="text-mute">{fix.detail}</p>
         </Card>
       ))}
     </div>

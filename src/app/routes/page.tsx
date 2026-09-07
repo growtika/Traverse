@@ -36,15 +36,17 @@ export default function RoutesPage() {
                   {String(route.sortOrder).padStart(2, "0")} · {route.slug}
                 </div>
                 <h2 className="text-2xl">{route.name}</h2>
-                <p className="mt-1 max-w-2xl text-[#cfc3a8]">{route.intent}</p>
+                <p className="mt-1 max-w-2xl text-mute">{route.intent}</p>
                 <p className="mt-2 font-mono text-[12px] text-mute">
                   terms: {route.queryTerms.join(", ")}
                 </p>
               </div>
               <button
                 onClick={() => toggle(route)}
-                className={`font-mono text-[12px] uppercase tracking-[0.14em] ${
-                  route.enabled ? "text-moss" : "text-mute"
+                className={`rounded-lg border px-3 py-1.5 font-mono text-[12px] font-bold uppercase tracking-[0.08em] ${
+                  route.enabled
+                    ? "border-trail bg-mint text-ink"
+                    : "border-line bg-paper text-mute"
                 }`}
               >
                 {route.enabled ? "Enabled" : "Disabled"}

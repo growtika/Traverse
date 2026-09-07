@@ -25,9 +25,9 @@ export default function RunsPage() {
       {runs.length === 0 ? (
         <Empty title="No runs stored" detail="Start a survey to create the first durable record." />
       ) : (
-        <Card>
+        <Card className="overflow-hidden">
           <table className="w-full text-left text-sm">
-            <thead className="font-mono text-[10px] uppercase tracking-[0.16em] text-mute">
+            <thead className="bg-paper-2 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink">
               <tr>
                 <th className="px-4 py-3">Run</th>
                 <th>Status</th>
@@ -45,7 +45,7 @@ export default function RunsPage() {
                   </td>
                   <td>{run.status}</td>
                   <td className="font-mono">{run.summary?.overall ?? "—"}</td>
-                  <td className="text-[#cfc3a8]">{new Date(run.createdAt).toLocaleString()}</td>
+                  <td className="text-mute">{new Date(run.createdAt).toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>

@@ -79,7 +79,7 @@ export default function AlertsPage() {
         </form>
       </Card>
 
-      <h2 className="mb-3 text-2xl">Watchers</h2>
+      <h2 className="mb-3 text-2xl font-bold tracking-tight">Watchers</h2>
       <div className="mb-8 grid gap-3">
         {alerts.map((alert) => (
           <Card key={alert.id} className="flex items-center justify-between px-4 py-3">
@@ -103,7 +103,7 @@ export default function AlertsPage() {
         ))}
       </div>
 
-      <h2 className="mb-3 text-2xl">Events</h2>
+      <h2 className="mb-3 text-2xl font-bold tracking-tight">Events</h2>
       {events.length === 0 ? (
         <Empty
           title="No alert events"
@@ -117,7 +117,7 @@ export default function AlertsPage() {
                 Slack: {event.slackStatus} · {new Date(event.createdAt).toLocaleString()}
               </div>
               <div>{event.title}</div>
-              <p className="text-[#cfc3a8]">{event.detail}</p>
+              <p className="text-mute">{event.detail}</p>
             </Card>
           ))}
         </div>

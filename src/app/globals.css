@@ -1,29 +1,44 @@
 @import "tailwindcss";
 
 :root {
-  --ink: #0c0b09;
-  --ink-2: #161410;
-  --line: #2b261e;
-  --line-2: #3c3428;
-  --paper: #e7dcc4;
-  --paper-dim: #cfc3a8;
-  --rust: #c45c26;
-  --moss: #7d9a6f;
-  --warn: #d3a23a;
-  --mute: #8a8172;
+  --ink: #14211c;
+  --cream: #f2f3ec;
+  --paper: #ffffff;
+  --paper-2: #e7e6de;
+  --line: #c5d6c8;
+  --line-2: #a9cdb1;
+  --peach: #ffcf9c;
+  --peach-2: #ffab5e;
+  --moss: #4f9a6a;
+  --trail: #a9cdb1;
+  --mint: #d6e7d8;
+  --mute: #66716b;
+  --mute-2: #98a29c;
+  --signal: #ff5a45;
+  --warn: #c9893a;
+  --rust: #ff5a45;
 }
 
 @theme inline {
   --color-ink: var(--ink);
-  --color-ink-2: var(--ink-2);
-  --color-line: var(--line);
+  --color-cream: var(--cream);
   --color-paper: var(--paper);
-  --color-rust: var(--rust);
+  --color-paper-2: var(--paper-2);
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+  --color-peach: var(--peach);
+  --color-peach-2: var(--peach-2);
   --color-moss: var(--moss);
-  --color-warn: var(--warn);
+  --color-trail: var(--trail);
+  --color-mint: var(--mint);
   --color-mute: var(--mute);
-  --font-sans: var(--font-serif);
-  --font-mono: var(--font-geist-mono);
+  --color-mute-2: var(--mute-2);
+  --color-signal: var(--signal);
+  --color-warn: var(--warn);
+  --color-rust: var(--rust);
+  --font-sans: var(--font-jakarta);
+  --font-mono: var(--font-plex);
+  --font-display: var(--font-fraunces);
 }
 
 * {
@@ -33,15 +48,17 @@
 html,
 body {
   min-height: 100%;
-  background: var(--ink);
-  color: var(--paper);
+  background: var(--cream);
+  color: var(--ink);
 }
 
 body {
-  font-family: var(--font-serif), Georgia, serif;
+  font-family: var(--font-jakarta), "Plus Jakarta Sans", system-ui, sans-serif;
+  background-color: var(--cream);
   background-image:
-    radial-gradient(ellipse at top, rgba(231, 220, 196, 0.04), transparent 46%),
-    linear-gradient(180deg, #100e0b 0%, #0c0b09 100%);
+    linear-gradient(rgba(20, 33, 28, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(20, 33, 28, 0.035) 1px, transparent 1px);
+  background-size: 32px 32px;
 }
 
 a {
@@ -56,12 +73,23 @@ textarea {
 }
 
 ::selection {
-  background: rgba(196, 92, 38, 0.35);
+  background: rgba(255, 207, 156, 0.55);
+}
+
+:focus-visible {
+  outline: 2px solid var(--peach-2);
+  outline-offset: 2px;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--moss);
 }
 
 .frame-grid {
+  background-color: #f7f8f2;
   background-image:
-    linear-gradient(rgba(231, 220, 196, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(231, 220, 196, 0.04) 1px, transparent 1px);
-  background-size: 28px 28px;
+    linear-gradient(rgba(169, 205, 177, 0.42) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(169, 205, 177, 0.42) 1px, transparent 1px);
+  background-size: 24px 24px;
 }
